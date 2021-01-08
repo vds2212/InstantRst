@@ -103,7 +103,7 @@ g:instant_rst_port
 
     If your vim is installed with '+py', then it will open at your lan ip.
 
-    like ``http://192.168.1.123:5676``
+    like ``http://192.168.1.123:5677``
 
 g:instant_rst_localhost_only
     Only use localhost, and disable lan ip
