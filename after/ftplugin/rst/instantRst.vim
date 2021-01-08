@@ -84,17 +84,17 @@ fun! s:startDaemon(file) "{{{
     endif
     if g:_instant_rst_daemon_started == 0
 
-        let args_browser = g:instant_rst_browser != '' ? 
+        let args_browser = g:instant_rst_browser != '' ?
                     \ ' -b '.g:instant_rst_browser : ''
-        let args_port = g:instant_rst_port != 5000 ? 
+        let args_port = g:instant_rst_port != 5000 ?
                     \ ' -p '.g:instant_rst_port : ''
-        let args_static = g:instant_rst_static != '' ? 
+        let args_static = g:instant_rst_static != '' ?
                     \ ' -s '.g:instant_rst_static : ''
-        let args_template = g:instant_rst_template != '' ? 
+        let args_template = g:instant_rst_template != '' ?
                     \ ' -t '.g:instant_rst_template : ''
-        let args_file = a:file != '' ? 
+        let args_file = a:file != '' ?
                     \ ' -f '.substitute(a:file, ' ', '\\ ', 'g') : ''
-        let args_local = g:instant_rst_localhost_only == 1 ? 
+        let args_local = g:instant_rst_localhost_only == 1 ?
                     \ ' -l ' : ''
         let args_additional_dirs = ''
 
@@ -102,7 +102,15 @@ fun! s:startDaemon(file) "{{{
             let args_additional_dirs .= ' -d '.directory
         endfor
 
-        let  cmd = "sh -c \"instantRst"
+        if has("win32")
+            let redirect = ' >nul 2>&1'
+        else
+            let redirect = ' >/dev/null 2>&1 &'
+        endif
+
+        " let  cmd = "sh -c \"instantRst"
+        " let  cmd = "start \"InstantRst\" /MIN instantRst.bat"
+        let  cmd = "start \"InstantRst\" /MIN instantRst.bat"
                     \.args_browser
                     \.args_port
                     \.args_file
@@ -110,17 +118,23 @@ fun! s:startDaemon(file) "{{{
                     \.args_template
                     \.args_local
                     \.args_additional_dirs
-                    \.'" >/dev/null'
-                    \.' 2>&1'
-                    \.' &'
+                    \.redirect
+                    " \.' >nul 2>&1'
+                    " \.' >/dev/null 2>&1 &'
         call s:system(cmd)
         let g:_instant_rst_daemon_started = 1
     endif
 endfun "}}}
 
 fun! s:killDaemon()
-    echom "curl -s -X DELETE http://" . s:host .  ":".g:instant_rst_port." >/dev/null 2>&1 &"
-    call s:system("curl -s -X DELETE http://" . s:host .  ":".g:instant_rst_port." >/dev/null 2>&1 &")
+    if has("win32")
+        let redirect = ' >nul 2>&1'
+    else
+        let redirect = ' >/dev/null 2>&1 &'
+    endif
+
+    echom "curl -s -X DELETE http://" . s:host . ":" . g:instant_rst_port . redirect
+    call s:system("curl -s -X DELETE http://" . s:host . ":" . g:instant_rst_port . redirect)
     if g:_instant_rst_daemon_started == 1
         " echom "curl -s -X DELETE http://" . s:host .  ":".g:instant_rst_port." >/dev/null 2>&1 &"
         " call s:system("curl -s -X DELETE http://" . s:host .  ":".g:instant_rst_port." >/dev/null 2>&1 &")
@@ -142,14 +156,20 @@ fun! s:updateTmpFile(bufname)
     " let cmd = "cat ".b:ir_tmpfile
     " call s:system(cmd)
 endfun
- 
+
 fun! s:refreshView()
     " echo "refresh"
     call s:updateTmpFile(bufnr('%'))
     let p = string(str2float(line('.')) / line('$'))
     let dir = expand('%:p:h')
-    " let cmd = "curl -d 'file=". b:ir_tmpfile ."' -d 'p=".p."' -d 'dir=".dir."'  http://" . s:host . ":".g:instant_rst_port." &>/dev/null &"
-    let cmd = "curl -d 'file=". b:ir_tmpfile ."' -d 'pos=".p."' -d 'dir=".dir."'  http://" . s:host . ":".g:instant_rst_port." >/dev/null 2>&1 &"
+
+    if has("win32")
+        let redirect = ' >nul 2>&1'
+    else
+        let redirect = ' >/dev/null 2>&1 &'
+    endif
+
+    let cmd = "curl -d file=". b:ir_tmpfile ." -d pos=".p." -d dir=".dir."  http://" . s:host . ":" . g:instant_rst_port . redirect
     " >>> let cmd = 'curl -d name=hello http://' . s:host . ':'.g:instant_rst_port
     " >>> call s:system(cmd)
     " echom "system ". cmd
@@ -173,8 +193,15 @@ fun! s:scroll() "{{{
     if abs(p - b:scroll_pos) > 0.05
         let b:scroll_pos = p
 
+
+        if has("win32")
+            let redirect = ' >nul 2>&1'
+        else
+            let redirect = ' >/dev/null 2>&1 &'
+        endif
+
         " let cmd = "curl -d pos='".p."' http://" . s:host . ":".g:instant_rst_port." &>/dev/null &"
-        let cmd = "curl -d pos='".string(p)."' http://" . s:host . ":".g:instant_rst_port." >/dev/null 2>&1 &"
+        let cmd = "curl -d pos=\"" . string(p) . "\" http://" . s:host . ":".g:instant_rst_port . "\"" . redirect
         call s:system(cmd)
     endif
 
@@ -215,7 +242,7 @@ fu! s:cleanUp(...)
             call s:killDaemon()
         endif
     endif
-  
+
     if exists("b:ir_tmpfile") && filereadable(b:ir_tmpfile)
         call delete(b:ir_tmpfile)
     endif
@@ -242,7 +269,7 @@ fu! s:preview(bang)
     if a:bang == '!' ||  g:instant_rst_forever == 1
         " Add a always preview rst mode
         aug instant-rst
-            sil! au! 
+            sil! au!
             if g:instant_rst_slow
                 au CursorHold,BufWrite,InsertLeave <buffer>,*.rst call s:temperedRefresh()
             else
