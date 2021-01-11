@@ -103,7 +103,7 @@ fun! s:startDaemon(file) "{{{
         endfor
 
         if has("win32")
-            let redirect = ' >nul 2>&1'
+            let redirect = ' >nul 2>&1 &'
         else
             let redirect = ' >/dev/null 2>&1 &'
         endif
@@ -128,7 +128,7 @@ endfun "}}}
 
 fun! s:killDaemon()
     if has("win32")
-        let redirect = ' >nul 2>&1'
+        let redirect = ' >nul 2>&1 &'
     else
         let redirect = ' >/dev/null 2>&1 &'
     endif
@@ -164,7 +164,7 @@ fun! s:refreshView()
     let dir = expand('%:p:h')
 
     if has("win32")
-        let redirect = ' >nul 2>&1'
+        let redirect = ' >nul 2>&1 &'
     else
         let redirect = ' >/dev/null 2>&1 &'
     endif
